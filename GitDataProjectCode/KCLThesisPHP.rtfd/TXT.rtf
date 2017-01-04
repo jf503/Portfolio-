@@ -1,0 +1,98 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504
+{\fonttbl\f0\froman\fcharset0 Times-Roman;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;\csgray\c100000;\cssrgb\c0\c0\c0;}
+\margl1440\margr1440\vieww21500\viewh21540\viewkind0
+\deftab720
+\pard\pardeftab720\sl300\sa240\partightenfactor0
+
+\f0\fs26\fsmilli13333 \cf2 \expnd0\expndtw0\kerning0
+<?php include_once('csvutil.php'); 
+\fs24 \
+
+\fs26\fsmilli13333 function startsWith($haystack, $needle)\uc0\u8232 \{\u8232 $length = strlen($needle);\u8232 return (substr($haystack, 0, $length) === $needle); \} 
+\fs24 \
+
+\fs26\fsmilli13333 function getArchiveMonths()\uc0\u8232 \{\u8232 $ret = array();\u8232 for( $year = 1971; $year <= 2015; $year++ ) \{ 
+\fs24 \
+
+\fs26\fsmilli13333 for( $month = 1; $month <= 12; $month++ ) \{\uc0\u8232 if( $year == 2015 && $month >= 7 )\u8232 break; 
+\fs24 \
+
+\fs26\fsmilli13333 $ret[] = sprintf("%d/%02d", $year, $month ); \}\uc0\u8232 \}\u8232 return $ret; 
+\fs24 \
+
+\fs26\fsmilli13333 \} 
+\fs24 \
+
+\fs26\fsmilli13333 function index_filename_from_issue( $issue )\uc0\u8232 \{\u8232 return "index/" . "ensign" . str_replace( "/", "_", $issue ) . ".html"; \} 
+\fs24 \
+
+\fs26\fsmilli13333 function retrieve_index( $issue )\uc0\u8232 \{\u8232 $url = "http://www.lds.org/ensign/" . $issue . "?lang=eng"; $filename = index_filename_from_issue( $issue ); 
+\fs24 \
+
+\fs26\fsmilli13333 $src = file_get_contents( $url ); file_put_contents( $filename, $src ); \} 
+\fs24 \
+
+\fs26\fsmilli13333 function extract_articles( $issue, & $ret )\uc0\u8232 \{\u8232 $filename = index_filename_from_issue( $issue ); $src = file_get_contents( $filename ); 
+\fs24 \
+
+\fs26\fsmilli13333 $regout = array();\uc0\u8232 $urlstart = "https://www.lds.org/ensign/$issue/"; //echo "URLStart: " . $urlstart . "\\n";\u8232 $regexp = "[<a href=\\"$urlstart(.*)\\">]";\u8232 //echo "regexp: " . $regexp . "\\n"; preg_match_all( $regexp, $src, $regout ); foreach( $regout[1] as $urlend )\u8232 \{\u8232 if( strpos($urlend, "media=audio") !== FALSE ) continue;\u8232 $url = $urlstart . $urlend;\u8232 $ret[] = $url;\u8232 \}\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 function extract_info( $src, & $ret ) \{\uc0\u8232 if( empty( $src ) )\u8232 return; 
+\fs24 \
+
+\fs26\fsmilli13333 $year = "";\uc0\u8232 $month = "";\u8232 $author = "";\u8232 $title = "";\u8232 //<span class="active">Your Journey of Giving</span> $regout = array(); 
+\fs24 \
+
+\fs26\fsmilli13333 $regexp = "[<span class=\\"active\\">(.*)</span>]"; preg_match( $regexp, $src, $regout );\uc0\u8232 $title = html_entity_decode( $regout[1] );\u8232 echo "title is $title\\n"; 
+\fs24 \
+
+\fs26\fsmilli13333 $regout = array();\uc0\u8232 $regexp = "[link rel=\\"canonical\\" href=\\"https://www.lds.org/ensign/(.*)\\">]"; preg_match( $regexp, $src, $regout );\u8232 $expl = explode( "/", $regout[1] );\u8232 $year = $expl[0];\u8232 $month = $expl[1];\u8232 $regout = array();\u8232 $regexp = "[<h2 class=\\"author\\">(.*)</h2>]s";\u8232 $matches = preg_match( $regexp, $src, $regout );\u8232 echo "matches = $matches\\n";\u8232 print_r( $regout );\u8232 if( $matches === FALSE || $matches === 0 )\u8232 \{\u8232 $author = "Unknown";\u8232 \}\u8232 else\u8232 \{\u8232 $subsrc = $matches[1];\u8232 echo "Subsrc: $subsrc\\n";\u8232 \}\u8232 $ret["year"] = $year;\u8232 $ret["month"] = $month;\u8232 $ret["author"] = $author;\u8232 $ret["title"] = $title;\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 function step_1()\uc0\u8232 \{\u8232 $issues = getArchiveMonths(); foreach( $issues as $issue )\u8232 \{\u8232 echo $issue . "\\n"; retrieve_index( $issue );\u8232 \}\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 function step_2()\uc0\u8232 \{\u8232 $issues = getArchiveMonths();\u8232 $articles = array();\u8232 foreach( $issues as $issue )\u8232 \{\u8232 extract_articles( $issue, $articles );\u8232 \}\u8232 file_put_contents( "ensign_queue.dat", serialize( $articles ) ); \} 
+\fs24 \
+
+\fs26\fsmilli13333 function step_3()\uc0\u8232 \{\u8232 // These are pages that were set up incorrectly to always redirect when we tried to\u8232 // retrieve them so we had to skip them.\u8232 $skipped = array();\u8232 $skipped[] = "https://www.lds.org/ensign/2012/04/added-focus-on-ministering-strengthens-visiting- teaching?lang=eng";\u8232 $skipped[] = "https://www.lds.org/ensign/1988/05/come-unto-christ-and-be-perfected-in-him?lang=eng"; $skipped[] = "https://www.lds.org/ensign/1984/05/small-acts-lead-to-great-consequences?lang=eng"; $skipped[] = "https://www.lds.org/ensign/1984/05/go-ye-therefore-and-teach-all-nations?lang=eng"; $skipped[] = "https://www.lds.org/ensign/1978/01/mormon-sundays?lang=eng"; 
+\fs24 \
+
+\fs26\fsmilli13333 $articles = unserialize( file_get_contents( "ensign_queue.dat" ) ); while( !empty( $articles ) )\uc0\u8232 \{\u8232 $url = end( $articles ); 
+\fs24 \
+
+\fs26\fsmilli13333 if( in_array( $url, $skipped ) ) \{\uc0\u8232 echo "Skipping " . $url . "\\n"; \} 
+\fs24 \
+
+\fs26\fsmilli13333 else\uc0\u8232 \{\u8232 echo "Downloading #" . count($articles) . " from " . $url . "\\n"; $src = file_get_contents( $url );\u8232 if( empty( $src ) )\u8232 \{ 
+\fs24 \
+
+\fs26\fsmilli13333 echo "Error\\n";\uc0\u8232 exit();\u8232 \}\u8232 file_put_contents( "articles/ensign" . count($articles) . ".html", $src ); \} 
+\fs24 \
+
+\fs26\fsmilli13333 array_pop( $articles );\uc0\u8232 file_put_contents( "ensign_queue.dat", serialize( $articles ) ); \}\u8232 echo "Done\\n";\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 function step_4()\uc0\u8232 \{\u8232 foreach( scandir("./articles") as $filename )\u8232 \{\u8232 if( !startsWith( $filename, "ensign" ) )\u8232 continue;\u8232 echo $filename . "\\n";\u8232 $src = file_get_contents( "./articles/" . $filename ); $info = array();\u8232 extract_info( $src, $info );\u8232 print_r( $info );\u8232 exit();\u8232 \}\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 function main()\uc0\u8232 \{\u8232 // Retrieve indexes\u8232 //step_1();\u8232 // Get articles out of each index, and make the queue file //step_2();\u8232 // Download articles from the queue\u8232 //step_3();\u8232 // Rename downloaded files based on metadata step_4();\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 main(); ?> 
+\fs24 \
+\pard\pardeftab720\sl360\sa240\partightenfactor0
+
+\b\fs32 \cf2 Utility Function 
+\b0\fs24 \
+\pard\pardeftab720\sl300\sa240\partightenfactor0
+
+\fs26\fsmilli13333 \cf2 <?php\uc0\u8232 // This is a small utility function that we use all over.\u8232 function sputcsv($row, $delimiter = ',', $enclosure = '"', $eol = "\\n")\u8232 \{\u8232 static $fp = false;\u8232 if ($fp === false)\u8232 \{\u8232 $fp = fopen('php://temp', 'r+'); // see http://php.net/manual/en/wrappers.php.php // NB: anything you read/write to/from 'php://temp' is specific to this filehandle \}\u8232 else\u8232 \{\u8232 rewind($fp);\u8232 \}\u8232 if (fputcsv($fp, $row, $delimiter, $enclosure) === false)\u8232 \{\u8232 return false;\u8232 \}\u8232 rewind($fp);\u8232 $csv = fgets($fp);\u8232 if ($eol != PHP_EOL)\u8232 \{\u8232 $csv = substr($csv, 0, (0 - strlen(PHP_EOL))) . $eol;\u8232 \}\u8232 return $csv;\u8232 \} 
+\fs24 \
+
+\fs26\fsmilli13333 ?> 
+\fs24 \
+}
